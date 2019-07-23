@@ -1,7 +1,10 @@
 package com.ccy.controller;
 
+import com.ccy.enums.OperatorFriendRequestTypeEnum;
+import com.ccy.enums.SearchFriendsStatusEnum;
 import com.ccy.pojo.Users;
 import com.ccy.pojo.bo.UsersBo;
+import com.ccy.pojo.vo.MyFriendsVO;
 import com.ccy.pojo.vo.UsersVo;
 import com.ccy.service.UserSerivce;
 import com.ccy.utils.CcyJSONResult;
@@ -16,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("u")
@@ -90,5 +95,86 @@ public class UserController {
          users = userSerivce.updateUsersInfo(users);
 
          return CcyJSONResult.ok(users);
+    }
+    @PostMapping("/search")
+    public CcyJSONResult searchUser(String myUserId,String friendUsername) throws Exception
+    {
+        if(StringUtils.isBlank(myUserId)||StringUtils.isBlank(friendUsername))
+        {
+            return CcyJSONResult.errorMsg("查询内容不能为空");
+        }
+        Integer status = userSerivce.preconditionSearchFriends(myUserId, friendUsername);
+        if(status==SearchFriendsStatusEnum.SUCCESS.status)
+        {
+            Users user = userSerivce.queryUserInfoByUsername(friendUsername);
+            UsersVo usersVo=new UsersVo();
+            BeanUtils.copyProperties(user,usersVo);
+            return CcyJSONResult.ok(usersVo);
+        }else
+        {
+            String msgError = SearchFriendsStatusEnum.getMsgByKey(status);
+            return CcyJSONResult.errorMsg(msgError);
+        }
+    }
+    @PostMapping("/addFriendRequest")
+    public CcyJSONResult addFriendRequest(String myUserId,String friendUserName)throws Exception
+    {
+         if(StringUtils.isBlank(myUserId)||StringUtils.isBlank(friendUserName))
+         {
+             return CcyJSONResult.errorMsg("");
+         }
+        Integer status = userSerivce.preconditionSearchFriends(myUserId, friendUserName);
+        if (status == SearchFriendsStatusEnum.SUCCESS.status) {
+            userSerivce.sendFriendRequest(myUserId, friendUserName);
+        } else {
+            String errorMsg = SearchFriendsStatusEnum.getMsgByKey(status);
+            return CcyJSONResult.errorMsg(errorMsg);
+        }
+        return CcyJSONResult.ok();
+    }
+
+    @PostMapping("/queryFriendRequests")
+    public CcyJSONResult queryFriendRequests(String userId)
+    {
+        if (StringUtils.isBlank(userId)) {
+            return CcyJSONResult.errorMsg("");
+        }
+        return CcyJSONResult.ok(userSerivce.queryFriendRequestList(userId));
+    }
+
+    @PostMapping("/operFriendRequest")
+    public CcyJSONResult operFriendRequest(String acceptUserId, String sendUserId,
+                                             Integer operType)
+    {
+        if (StringUtils.isBlank(acceptUserId)
+                || StringUtils.isBlank(sendUserId)
+                || operType == null) {
+            return CcyJSONResult.errorMsg("");
+        }
+        //枚举值0或者是1
+        if (StringUtils.isBlank(OperatorFriendRequestTypeEnum.getMsgByType(operType))) {
+            return CcyJSONResult.errorMsg("");
+        }
+        if (operType == OperatorFriendRequestTypeEnum.IGNORE.type) {
+            userSerivce.deleteFriendRequest(sendUserId, acceptUserId);
+        }else if(operType == OperatorFriendRequestTypeEnum.PASS.type)
+        {
+            userSerivce.passFriendRequest(sendUserId,acceptUserId);
+        }
+
+        return CcyJSONResult.ok();
+    }
+
+    @PostMapping("/myFriends")
+    public CcyJSONResult myFriends(String userId) {
+        // 0. userId 判断不能为空
+        if (StringUtils.isBlank(userId)) {
+            return CcyJSONResult.errorMsg("");
+        }
+
+        // 1. 数据库查询好友列表
+        List<MyFriendsVO> myFirends = userSerivce.queryMyFriends(userId);
+
+        return CcyJSONResult.ok(myFirends);
     }
 }

@@ -1,7 +1,15 @@
 package com.ccy.service.impl;
 
+import com.ccy.enums.SearchFriendsStatusEnum;
+import com.ccy.mapper.FriendsRequestMapper;
+import com.ccy.mapper.MyFriendsMapper;
 import com.ccy.mapper.UsersMapper;
+import com.ccy.mapper.UsersMapperCustom;
+import com.ccy.pojo.FriendsRequest;
+import com.ccy.pojo.MyFriends;
 import com.ccy.pojo.Users;
+import com.ccy.pojo.vo.FriendRequestVO;
+import com.ccy.pojo.vo.MyFriendsVO;
 import com.ccy.service.UserSerivce;
 import com.ccy.utils.FastDFSClient;
 import com.ccy.utils.FileUtils;
@@ -14,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import tk.mybatis.mapper.entity.Example;
 
+import java.util.Date;
+import java.util.List;
+
 @Service
 public class UserServiceImpl implements UserSerivce {
 
@@ -22,9 +33,15 @@ public class UserServiceImpl implements UserSerivce {
     @Autowired
     private UsersMapper usersMapper;
     @Autowired
+    private UsersMapperCustom usersMapperCustom;
+    @Autowired
     private Sid sid;
     @Autowired
     private FastDFSClient fastDFSClient;
+    @Autowired
+    private MyFriendsMapper myFriendsMapper;
+    @Autowired
+    private FriendsRequestMapper friendsRequestMapper;
     @Transactional(propagation = Propagation.SUPPORTS)
     @Override
     public boolean queryUsernameIsExist(String username) {
@@ -48,7 +65,7 @@ public class UserServiceImpl implements UserSerivce {
     public Users saveUser(Users user) {
         String userId = sid.nextShort();
         String qrCodePath="D://user"+userId+"qrcode.png";
-        qrCodeUtils.createQRCode(qrCodePath,"weixin_qrcode"+user.getUsername());
+        qrCodeUtils.createQRCode(qrCodePath,"weixin_qrcode:"+user.getUsername());
         MultipartFile qrCodeFile = FileUtils.fileToMultipart(qrCodePath);
         String qrCodeUrl="";
         try {
@@ -76,5 +93,97 @@ public class UserServiceImpl implements UserSerivce {
           return usersMapper.selectByPrimaryKey(userId);
     }
 
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public Integer preconditionSearchFriends(String myUserId,String friendUsername)
+    {
+        Users user = queryUserInfoByUsername(friendUsername);
+        if(user==null)
+        {
+            return SearchFriendsStatusEnum.USER_NOT_EXIST.status;
+        }
+        if(user.getId().equals(myUserId))
+        {
+            return SearchFriendsStatusEnum.NOT_YOURSELF.status;
+        }
+        Example mfe=new Example(MyFriends.class);
+        Example.Criteria mfc = mfe.createCriteria();
+        mfc.andEqualTo("myUserId",myUserId);
+        mfc.andEqualTo("myFriendUserId",user.getId());
+        MyFriends myFriend = myFriendsMapper.selectOneByExample(mfe);
+        if(myFriend!=null)
+        {
+            return SearchFriendsStatusEnum.ALREADY_FRIENDS.status;
+        }
+        return  SearchFriendsStatusEnum.SUCCESS.status;
+    }
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public Users queryUserInfoByUsername(String username)
+    {
+        Example ue=new Example(Users.class);
+        Example.Criteria criteria = ue.createCriteria();
+        criteria.andEqualTo("username",username);
+        return usersMapper.selectOneByExample(ue);
+    }
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void sendFriendRequest(String myUserId, String friendUserName) {
+        Users friend = queryUserInfoByUsername(friendUserName);
+        Example fre = new Example(FriendsRequest.class);
+        Example.Criteria frc = fre.createCriteria();
+        frc.andEqualTo("sendUserId", myUserId);
+        frc.andEqualTo("acceptUserId", friend.getId());
+        FriendsRequest friendRequest = friendsRequestMapper.selectOneByExample(fre);
+        if(friendRequest==null)
+        {
+            String requestId = sid.nextShort();
+            FriendsRequest request = new FriendsRequest();
+            request.setId(requestId);
+            request.setSendUserId(myUserId);
+            request.setAcceptUserId(friend.getId());
+            request.setRequestDateTime(new Date());
+            friendsRequestMapper.insert(request);
+        }
+    }
 
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public List<FriendRequestVO> queryFriendRequestList(String acceptUserId) {
+        return usersMapperCustom.queryFriendRequestList(acceptUserId);
+    }
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void deleteFriendRequest(String sendUserId, String acceptUserId) {
+          Example fre=new Example(FriendsRequest.class);
+          Example.Criteria frc = fre.createCriteria();
+          frc.andEqualTo("sendUserId",sendUserId);
+          frc.andEqualTo("acceptUserId",acceptUserId);
+          friendsRequestMapper.deleteByExample(fre);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void passFriendRequest(String sendUserId, String acceptUserId) {
+        saveFriends(sendUserId,acceptUserId);
+        saveFriends(acceptUserId,sendUserId);
+        deleteFriendRequest(sendUserId,acceptUserId);
+    }
+
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public List<MyFriendsVO> queryMyFriends(String userId) {
+        List<MyFriendsVO> myFirends = usersMapperCustom.queryMyFriends(userId);
+        return myFirends;
+    }
+
+    private void saveFriends(String sendUserId,String acceptUserId)
+    {
+         MyFriends myFriends=new MyFriends();
+         String recordId = sid.nextShort();
+         myFriends.setId(recordId);
+         myFriends.setMyFriendUserId(acceptUserId);
+         myFriends.setMyUserId(sendUserId);
+         myFriendsMapper.insert(myFriends);
+    }
 }
