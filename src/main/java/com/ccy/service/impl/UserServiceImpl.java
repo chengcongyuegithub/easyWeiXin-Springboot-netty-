@@ -1,16 +1,15 @@
 package com.ccy.service.impl;
 
+import com.ccy.enums.MsgSignFlagEnum;
 import com.ccy.enums.SearchFriendsStatusEnum;
-import com.ccy.mapper.FriendsRequestMapper;
-import com.ccy.mapper.MyFriendsMapper;
-import com.ccy.mapper.UsersMapper;
-import com.ccy.mapper.UsersMapperCustom;
+import com.ccy.mapper.*;
+import com.ccy.netty.ChatMsg;
 import com.ccy.pojo.FriendsRequest;
 import com.ccy.pojo.MyFriends;
 import com.ccy.pojo.Users;
 import com.ccy.pojo.vo.FriendRequestVO;
 import com.ccy.pojo.vo.MyFriendsVO;
-import com.ccy.service.UserSerivce;
+import com.ccy.service.UserService;
 import com.ccy.utils.FastDFSClient;
 import com.ccy.utils.FileUtils;
 import com.ccy.utils.QRCodeUtils;
@@ -26,7 +25,7 @@ import java.util.Date;
 import java.util.List;
 
 @Service
-public class UserServiceImpl implements UserSerivce {
+public class UserServiceImpl implements UserService {
 
     @Autowired
     private QRCodeUtils qrCodeUtils;
@@ -42,6 +41,8 @@ public class UserServiceImpl implements UserSerivce {
     private MyFriendsMapper myFriendsMapper;
     @Autowired
     private FriendsRequestMapper friendsRequestMapper;
+    @Autowired
+    private ChatMsgMapper chatMsgMapper;
     @Transactional(propagation = Propagation.SUPPORTS)
     @Override
     public boolean queryUsernameIsExist(String username) {
@@ -177,6 +178,22 @@ public class UserServiceImpl implements UserSerivce {
         return myFirends;
     }
 
+    @Override
+    public String saveMsg(ChatMsg chatMsg) {
+
+        com.ccy.pojo.ChatMsg msgDB = new com.ccy.pojo.ChatMsg();
+        String msgId = sid.nextShort();
+        msgDB.setId(msgId);
+        msgDB.setAcceptUserId(chatMsg.getReceiverId());
+        msgDB.setSendUserId(chatMsg.getSenderId());
+        msgDB.setCreateTime(new Date());
+        msgDB.setSignFlag(MsgSignFlagEnum.unsign.type);
+        msgDB.setMsg(chatMsg.getMsg());
+
+        chatMsgMapper.insert(msgDB);
+        return msgId;
+    }
+
     private void saveFriends(String sendUserId,String acceptUserId)
     {
          MyFriends myFriends=new MyFriends();
@@ -185,5 +202,11 @@ public class UserServiceImpl implements UserSerivce {
          myFriends.setMyFriendUserId(acceptUserId);
          myFriends.setMyUserId(sendUserId);
          myFriendsMapper.insert(myFriends);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void updateMsgSigned(List<String> msgIdList) {
+
     }
 }

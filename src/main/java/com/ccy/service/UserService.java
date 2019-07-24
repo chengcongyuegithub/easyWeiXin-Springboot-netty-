@@ -1,13 +1,14 @@
 package com.ccy.service;
 
 
+import com.ccy.netty.ChatMsg;
 import com.ccy.pojo.Users;
 import com.ccy.pojo.vo.FriendRequestVO;
 import com.ccy.pojo.vo.MyFriendsVO;
 
 import java.util.List;
 
-public interface UserSerivce {
+public interface UserService {
 
      boolean queryUsernameIsExist(String username);
      Users queryUserForLogin(String username,String pwd);
@@ -19,5 +20,7 @@ public interface UserSerivce {
      List<FriendRequestVO> queryFriendRequestList(String acceptUserId);
      void deleteFriendRequest(String sendUserId,String acceptUserId);
      void passFriendRequest(String sendUserId,String acceptUserId);
-     public List<MyFriendsVO> queryMyFriends(String userId);
+     List<MyFriendsVO> queryMyFriends(String userId);
+     String saveMsg(ChatMsg chatMsg);
+     void updateMsgSigned(List<String> msgIdList);
 }

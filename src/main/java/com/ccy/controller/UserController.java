@@ -6,7 +6,7 @@ import com.ccy.pojo.Users;
 import com.ccy.pojo.bo.UsersBo;
 import com.ccy.pojo.vo.MyFriendsVO;
 import com.ccy.pojo.vo.UsersVo;
-import com.ccy.service.UserSerivce;
+import com.ccy.service.UserService;
 import com.ccy.utils.CcyJSONResult;
 import com.ccy.utils.FastDFSClient;
 import com.ccy.utils.FileUtils;
@@ -27,7 +27,7 @@ import java.util.List;
 public class UserController {
 
     @Autowired
-    private UserSerivce userSerivce;
+    private UserService userService;
     @Autowired
     private FastDFSClient fastDFSClient;
     @PostMapping("/registOrLogin")
@@ -38,11 +38,11 @@ public class UserController {
         {
             return CcyJSONResult.errorMsg("用户名和密码不能为空。。。。");
         }
-        boolean userNameIsExist = userSerivce.queryUsernameIsExist(user.getUsername());
+        boolean userNameIsExist = userService.queryUsernameIsExist(user.getUsername());
         Users userResult=null;
         if(userNameIsExist)
         {
-            userResult = userSerivce.queryUserForLogin(user.getUsername(), MD5Utils.getMD5Str(user.getPassword()));
+            userResult = userService.queryUserForLogin(user.getUsername(), MD5Utils.getMD5Str(user.getPassword()));
             if(userResult==null)
             {
                 return CcyJSONResult.errorMsg("用户名或密码不正确。。。。");
@@ -55,7 +55,7 @@ public class UserController {
             user.setFaceImage("");
             user.setFaceImageBig("");
             user.setPassword(MD5Utils.getMD5Str(user.getPassword()));
-            userResult = userSerivce.saveUser(user);
+            userResult = userService.saveUser(user);
         }
         UsersVo usersVo=new UsersVo();
         BeanUtils.copyProperties(userResult,usersVo);
@@ -82,7 +82,7 @@ public class UserController {
          user.setId(usersBo.getUserId());
          user.setFaceImage(thumpImgUrl);
          user.setFaceImageBig(url);
-         user=userSerivce.updateUsersInfo(user);
+         user= userService.updateUsersInfo(user);
          return CcyJSONResult.ok(user);
     }
 
@@ -92,7 +92,7 @@ public class UserController {
          Users users=new Users();
          users.setId(usersBo.getUserId());
          users.setNickname(usersBo.getNickname());
-         users = userSerivce.updateUsersInfo(users);
+         users = userService.updateUsersInfo(users);
 
          return CcyJSONResult.ok(users);
     }
@@ -103,10 +103,10 @@ public class UserController {
         {
             return CcyJSONResult.errorMsg("查询内容不能为空");
         }
-        Integer status = userSerivce.preconditionSearchFriends(myUserId, friendUsername);
+        Integer status = userService.preconditionSearchFriends(myUserId, friendUsername);
         if(status==SearchFriendsStatusEnum.SUCCESS.status)
         {
-            Users user = userSerivce.queryUserInfoByUsername(friendUsername);
+            Users user = userService.queryUserInfoByUsername(friendUsername);
             UsersVo usersVo=new UsersVo();
             BeanUtils.copyProperties(user,usersVo);
             return CcyJSONResult.ok(usersVo);
@@ -123,9 +123,9 @@ public class UserController {
          {
              return CcyJSONResult.errorMsg("");
          }
-        Integer status = userSerivce.preconditionSearchFriends(myUserId, friendUserName);
+        Integer status = userService.preconditionSearchFriends(myUserId, friendUserName);
         if (status == SearchFriendsStatusEnum.SUCCESS.status) {
-            userSerivce.sendFriendRequest(myUserId, friendUserName);
+            userService.sendFriendRequest(myUserId, friendUserName);
         } else {
             String errorMsg = SearchFriendsStatusEnum.getMsgByKey(status);
             return CcyJSONResult.errorMsg(errorMsg);
@@ -139,7 +139,7 @@ public class UserController {
         if (StringUtils.isBlank(userId)) {
             return CcyJSONResult.errorMsg("");
         }
-        return CcyJSONResult.ok(userSerivce.queryFriendRequestList(userId));
+        return CcyJSONResult.ok(userService.queryFriendRequestList(userId));
     }
 
     @PostMapping("/operFriendRequest")
@@ -156,10 +156,10 @@ public class UserController {
             return CcyJSONResult.errorMsg("");
         }
         if (operType == OperatorFriendRequestTypeEnum.IGNORE.type) {
-            userSerivce.deleteFriendRequest(sendUserId, acceptUserId);
+            userService.deleteFriendRequest(sendUserId, acceptUserId);
         }else if(operType == OperatorFriendRequestTypeEnum.PASS.type)
         {
-            userSerivce.passFriendRequest(sendUserId,acceptUserId);
+            userService.passFriendRequest(sendUserId,acceptUserId);
         }
 
         return CcyJSONResult.ok();
@@ -173,7 +173,7 @@ public class UserController {
         }
 
         // 1. 数据库查询好友列表
-        List<MyFriendsVO> myFirends = userSerivce.queryMyFriends(userId);
+        List<MyFriendsVO> myFirends = userService.queryMyFriends(userId);
 
         return CcyJSONResult.ok(myFirends);
     }

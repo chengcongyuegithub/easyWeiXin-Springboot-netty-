@@ -36,4 +36,10 @@ public class WSServer {
         this.channelFuture=serverBootstrap.bind(8088);
         System.err.println("netty 服务器启动!!!");
     }
+
+    public static void main(String[] args) {
+        WSServer instance = WSServer.getInstance();
+        instance.start();
+    }
+
 }
