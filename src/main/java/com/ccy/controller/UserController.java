@@ -177,4 +177,17 @@ public class UserController {
 
         return CcyJSONResult.ok(myFirends);
     }
+
+    @PostMapping("/getUnReadMsgList")
+    public CcyJSONResult getUnReadMsgList(String acceptUserId) {
+        // 0. userId 判断不能为空
+        if (StringUtils.isBlank(acceptUserId)) {
+            return CcyJSONResult.errorMsg("");
+        }
+
+        // 查询列表
+        List<com.ccy.pojo.ChatMsg> unreadMsgList = userService.getUnReadMsgList(acceptUserId);
+
+        return CcyJSONResult.ok(unreadMsgList);
+    }
 }

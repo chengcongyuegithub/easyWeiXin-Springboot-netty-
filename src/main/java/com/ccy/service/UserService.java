@@ -23,4 +23,5 @@ public interface UserService {
      List<MyFriendsVO> queryMyFriends(String userId);
      String saveMsg(ChatMsg chatMsg);
      void updateMsgSigned(List<String> msgIdList);
+     List<com.ccy.pojo.ChatMsg> getUnReadMsgList(String acceptUserId);
 }
