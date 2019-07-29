@@ -19,7 +19,7 @@ import java.util.List;
 
 public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
 
-    private static ChannelGroup users=new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    public static ChannelGroup users=new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
         String content=msg.text();
